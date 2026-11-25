@@ -1,0 +1,434 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default-Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Core Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBootstrappedOwner() {
+      return isVerifiedUser()
+        && 'email' in request.auth.token
+        && request.auth.token.email is string
+        && request.auth.token.email.lower() == 'rossdsing@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedOwner() || (
+        isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // --- Entity Validation Blueprints ---
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 120))
+        && data.role in ['owner', 'admin'];
+    }
+
+    function isValidPortfolioConfig(data) {
+      return data.keys().hasAll(['studioName', 'visualIdentity', 'contact', 'ownerUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'studioName', 'studioTagline', 'seoDescription', 'publicSlug',
+          'allowPublicPdfExport', 'visualIdentity', 'contact',
+          'hasUnpublishedChanges', 'lastPublishedVersionId', 'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && data.studioName is string && data.studioName.size() >= 1 && data.studioName.size() <= 120
+        && (!('studioTagline' in data) || (data.studioTagline is string && data.studioTagline.size() <= 200))
+        && (!('seoDescription' in data) || (data.seoDescription is string && data.seoDescription.size() <= 400))
+        && (!('publicSlug' in data) || (data.publicSlug is string && data.publicSlug.size() <= 100))
+        && (!('allowPublicPdfExport' in data) || data.allowPublicPdfExport is bool)
+        && data.visualIdentity is map
+        && data.contact is map
+        && (!('hasUnpublishedChanges' in data) || data.hasUnpublishedChanges is bool)
+        && (!('lastPublishedVersionId' in data) || (data.lastPublishedVersionId is string && data.lastPublishedVersionId.size() <= 128))
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128;
+    }
+
+    function isValidPortfolioPage(data) {
+      return data.keys().hasAll(['id', 'order', 'slug', 'title', 'templateType', 'visible', 'elements', 'ownerUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'order', 'slug', 'title', 'subtitle', 'templateType',
+          'visible', 'backgroundColor', 'backgroundGradient', 'backgroundImage', 'accentColorOverride',
+          'elements', 'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.order is int && data.order >= 0 && data.order <= 500
+        && data.slug is string && data.slug.size() >= 1 && data.slug.size() <= 100
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 140
+        && (!('subtitle' in data) || (data.subtitle is string && data.subtitle.size() <= 240))
+        && data.templateType is string && data.templateType.size() >= 1 && data.templateType.size() <= 64
+        && data.visible is bool
+        && (!('backgroundColor' in data) || (data.backgroundColor is string && data.backgroundColor.size() <= 40))
+        && (!('backgroundGradient' in data) || (data.backgroundGradient is string && data.backgroundGradient.size() <= 300))
+        && (!('backgroundImage' in data) || (data.backgroundImage is string && data.backgroundImage.size() <= 1000))
+        && (!('accentColorOverride' in data) || (data.accentColorOverride is string && data.accentColorOverride.size() <= 40))
+        && data.elements is list && data.elements.size() <= 100
+        && (data.elements.size() == 0 || data.elements[0] is map)
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128;
+    }
+
+    function isValidServiceItem(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'visible', 'order', 'ownerUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'number', 'title', 'description', 'category',
+          'deliverables', 'visible', 'order', 'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && (!('number' in data) || (data.number is string && data.number.size() <= 16))
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+        && data.description is string && data.description.size() <= 600
+        && (!('category' in data) || (data.category is string && data.category.size() <= 80))
+        && (!('deliverables' in data) || (data.deliverables is list && data.deliverables.size() <= 20 && (data.deliverables.size() == 0 || data.deliverables[0] is string)))
+        && data.visible is bool
+        && data.order is int && data.order >= 0 && data.order <= 500
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128;
+    }
+
+    function isValidPackageItem(data) {
+      return data.keys().hasAll(['id', 'category', 'name', 'currency', 'features', 'isPopular', 'visible', 'order', 'ownerUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'category', 'name', 'description', 'price', 'currency',
+          'billingPeriod', 'imageUrl', 'features', 'promoLabel', 'isPopular',
+          'visible', 'order', 'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.category in ['branding', 'social', 'video', 'custom']
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && (!('description' in data) || (data.description is string && data.description.size() <= 500))
+        && (!('price' in data) || (data.price is string && data.price.size() <= 60))
+        && data.currency is string && data.currency.size() <= 12
+        && (!('billingPeriod' in data) || (data.billingPeriod is string && data.billingPeriod.size() <= 60))
+        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 1000))
+        && data.features is list && data.features.size() <= 30 && (data.features.size() == 0 || data.features[0] is string)
+        && (!('promoLabel' in data) || (data.promoLabel is string && data.promoLabel.size() <= 60))
+        && data.isPopular is bool
+        && data.visible is bool
+        && data.order is int && data.order >= 0 && data.order <= 500
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128;
+    }
+
+    function isValidTestimonialItem(data) {
+      return data.keys().hasAll(['id', 'clientName', 'quote', 'visible', 'order', 'ownerUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'clientName', 'clientRole', 'company', 'quote',
+          'resultMetric', 'avatarUrl', 'visible', 'order', 'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.clientName is string && data.clientName.size() >= 1 && data.clientName.size() <= 120
+        && (!('clientRole' in data) || (data.clientRole is string && data.clientRole.size() <= 120))
+        && (!('company' in data) || (data.company is string && data.company.size() <= 120))
+        && data.quote is string && data.quote.size() >= 1 && data.quote.size() <= 800
+        && (!('resultMetric' in data) || (data.resultMetric is string && data.resultMetric.size() <= 120))
+        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 1000))
+        && data.visible is bool
+        && data.order is int && data.order >= 0 && data.order <= 500
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128;
+    }
+
+    function isValidMediaFolder(data) {
+      return data.keys().hasAll(['id', 'name', 'ownerUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'name', 'ownerUid', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128;
+    }
+
+    function isValidMediaItem(data) {
+      return data.keys().hasAll(['id', 'name', 'url', 'mediaType', 'ownerUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'name', 'url', 'storagePath', 'mediaType', 'mimeType',
+          'sizeBytes', 'folderId', 'category', 'ownerUid', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 200
+        && data.url is string && data.url.size() >= 1 && data.url.size() <= 2000
+        && (!('storagePath' in data) || (data.storagePath is string && data.storagePath.size() <= 500))
+        && data.mediaType in ['image', 'logo', 'video']
+        && (!('mimeType' in data) || (data.mimeType is string && data.mimeType.size() <= 100))
+        && (!('sizeBytes' in data) || (data.sizeBytes is int && data.sizeBytes >= 0))
+        && (!('folderId' in data) || (data.folderId is string && data.folderId.size() <= 128))
+        && (!('category' in data) || (data.category is string && data.category.size() <= 80))
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128;
+    }
+
+    function isValidMediaAsset(data) {
+      return data.keys().hasAll(['id', 'dataUrl', 'mimeType', 'sizeBytes', 'ownerUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'dataUrl', 'mimeType', 'sizeBytes', 'ownerUid', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && data.dataUrl is string && data.dataUrl.size() >= 1 && data.dataUrl.size() <= 900000
+        && data.mimeType is string && data.mimeType.size() >= 1 && data.mimeType.size() <= 100
+        && data.sizeBytes is int && data.sizeBytes >= 0 && data.sizeBytes <= 900000
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128;
+    }
+
+    function isValidPortfolioVersion(data) {
+      return data.keys().hasAll(['id', 'label', 'snapshot', 'ownerUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'label', 'notes', 'snapshot', 'ownerUid', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && data.label is string && data.label.size() >= 1 && data.label.size() <= 140
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 400))
+        && data.snapshot is map
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128;
+    }
+
+    // --- Collection Rules ---
+
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (isAdmin() || (isVerifiedUser() && request.auth.uid == adminId));
+      allow list: if isAdmin();
+      allow create: if isValidId(adminId) && isAdmin() && isValidAdminUser(incoming())
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(adminId) && isAdmin() && isValidAdminUser(incoming())
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'updatedAt']);
+      allow delete: if isValidId(adminId) && isAdmin() && adminId != request.auth.uid;
+    }
+
+    // Publicly Readable Published Collections (Admin-only Writes)
+    match /published_portfolio/{docId} {
+      allow get: if isValidId(docId);
+      allow list: if true;
+      allow create: if isValidId(docId) && isAdmin() && isValidPortfolioConfig(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(docId) && isAdmin() && isValidPortfolioConfig(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'studioName', 'studioTagline', 'seoDescription', 'publicSlug',
+          'allowPublicPdfExport', 'visualIdentity', 'contact',
+          'hasUnpublishedChanges', 'lastPublishedVersionId', 'updatedAt'
+        ]);
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /published_pages/{pageId} {
+      allow get: if isValidId(pageId);
+      allow list: if true;
+      allow create: if isValidId(pageId) && isAdmin() && isValidPortfolioPage(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(pageId) && isAdmin() && isValidPortfolioPage(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'order', 'slug', 'title', 'subtitle', 'templateType',
+          'visible', 'backgroundColor', 'backgroundGradient', 'backgroundImage', 'accentColorOverride',
+          'elements', 'updatedAt'
+        ]);
+      allow delete: if isValidId(pageId) && isAdmin();
+    }
+
+    match /published_services/{serviceId} {
+      allow get: if isValidId(serviceId);
+      allow list: if true;
+      allow create: if isValidId(serviceId) && isAdmin() && isValidServiceItem(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(serviceId) && isAdmin() && isValidServiceItem(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'number', 'title', 'description', 'category', 'deliverables', 'visible', 'order', 'updatedAt'
+        ]);
+      allow delete: if isValidId(serviceId) && isAdmin();
+    }
+
+    match /published_packages/{packageId} {
+      allow get: if isValidId(packageId);
+      allow list: if true;
+      allow create: if isValidId(packageId) && isAdmin() && isValidPackageItem(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(packageId) && isAdmin() && isValidPackageItem(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'category', 'name', 'description', 'price', 'currency',
+          'billingPeriod', 'imageUrl', 'features', 'promoLabel', 'isPopular',
+          'visible', 'order', 'updatedAt'
+        ]);
+      allow delete: if isValidId(packageId) && isAdmin();
+    }
+
+    match /published_testimonials/{testimonialId} {
+      allow get: if isValidId(testimonialId);
+      allow list: if true;
+      allow create: if isValidId(testimonialId) && isAdmin() && isValidTestimonialItem(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(testimonialId) && isAdmin() && isValidTestimonialItem(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'clientName', 'clientRole', 'company', 'quote', 'resultMetric',
+          'avatarUrl', 'visible', 'order', 'updatedAt'
+        ]);
+      allow delete: if isValidId(testimonialId) && isAdmin();
+    }
+
+    // Admin-Only Draft Collections
+    match /draft_portfolio/{docId} {
+      allow get: if isValidId(docId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(docId) && isAdmin() && isValidPortfolioConfig(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(docId) && isAdmin() && isValidPortfolioConfig(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'studioName', 'studioTagline', 'seoDescription', 'publicSlug',
+          'allowPublicPdfExport', 'visualIdentity', 'contact',
+          'hasUnpublishedChanges', 'lastPublishedVersionId', 'updatedAt'
+        ]);
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /draft_pages/{pageId} {
+      allow get: if isValidId(pageId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(pageId) && isAdmin() && isValidPortfolioPage(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(pageId) && isAdmin() && isValidPortfolioPage(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'order', 'slug', 'title', 'subtitle', 'templateType',
+          'visible', 'backgroundColor', 'backgroundGradient', 'backgroundImage', 'accentColorOverride',
+          'elements', 'updatedAt'
+        ]);
+      allow delete: if isValidId(pageId) && isAdmin();
+    }
+
+    match /draft_services/{serviceId} {
+      allow get: if isValidId(serviceId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(serviceId) && isAdmin() && isValidServiceItem(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(serviceId) && isAdmin() && isValidServiceItem(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'number', 'title', 'description', 'category', 'deliverables', 'visible', 'order', 'updatedAt'
+        ]);
+      allow delete: if isValidId(serviceId) && isAdmin();
+    }
+
+    match /draft_packages/{packageId} {
+      allow get: if isValidId(packageId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(packageId) && isAdmin() && isValidPackageItem(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(packageId) && isAdmin() && isValidPackageItem(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'category', 'name', 'description', 'price', 'currency',
+          'billingPeriod', 'imageUrl', 'features', 'promoLabel', 'isPopular',
+          'visible', 'order', 'updatedAt'
+        ]);
+      allow delete: if isValidId(packageId) && isAdmin();
+    }
+
+    match /draft_testimonials/{testimonialId} {
+      allow get: if isValidId(testimonialId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(testimonialId) && isAdmin() && isValidTestimonialItem(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(testimonialId) && isAdmin() && isValidTestimonialItem(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'clientName', 'clientRole', 'company', 'quote', 'resultMetric',
+          'avatarUrl', 'visible', 'order', 'updatedAt'
+        ]);
+      allow delete: if isValidId(testimonialId) && isAdmin();
+    }
+
+    // Admin-Only Media Library & Versions
+    match /media_folders/{folderId} {
+      allow get: if isValidId(folderId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(folderId) && isAdmin() && isValidMediaFolder(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(folderId) && isAdmin() && isValidMediaFolder(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'updatedAt']);
+      allow delete: if isValidId(folderId) && isAdmin();
+    }
+
+    match /media_items/{itemId} {
+      allow get: if isValidId(itemId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(itemId) && isAdmin() && isValidMediaItem(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(itemId) && isAdmin() && isValidMediaItem(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'url', 'storagePath', 'mediaType', 'mimeType', 'sizeBytes', 'folderId', 'category', 'updatedAt'
+        ]);
+      allow delete: if isValidId(itemId) && isAdmin();
+    }
+
+    match /media_assets/{assetId} {
+      allow get: if isValidId(assetId);
+      allow list: if isAdmin();
+      allow create: if isValidId(assetId) && isAdmin() && isValidMediaAsset(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(assetId) && isAdmin() && isValidMediaAsset(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['dataUrl', 'mimeType', 'sizeBytes', 'updatedAt']);
+      allow delete: if isValidId(assetId) && isAdmin();
+    }
+
+    match /portfolio_versions/{versionId} {
+      allow get: if isValidId(versionId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(versionId) && isAdmin() && isValidPortfolioVersion(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(versionId) && isAdmin() && isValidPortfolioVersion(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['label', 'notes', 'updatedAt']);
+      allow delete: if isValidId(versionId) && isAdmin();
+    }
+  }
+}

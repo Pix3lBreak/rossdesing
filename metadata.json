@@ -1,0 +1,8 @@
+{
+  "name": "PORTFOLIO STUDIO PRO",
+  "description": "Aplicación web profesional de portafolios editoriales 16:9 editables con editor visual drag-and-drop, biblioteca multimedia en Firebase y panel administrativo completo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

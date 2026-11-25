@@ -1,0 +1,249 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator account record.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "displayName": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "enum": ["owner", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt", "updatedAt"]
+    },
+    "PortfolioConfig": {
+      "title": "PortfolioConfig",
+      "description": "Global portfolio configuration, visual identity tokens, contact info, and publication metadata.",
+      "type": "object",
+      "properties": {
+        "studioName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "studioTagline": { "type": "string", "maxLength": 200 },
+        "seoDescription": { "type": "string", "maxLength": 400 },
+        "publicSlug": { "type": "string", "maxLength": 100 },
+        "allowPublicPdfExport": { "type": "boolean" },
+        "visualIdentity": { "type": "object" },
+        "contact": { "type": "object" },
+        "hasUnpublishedChanges": { "type": "boolean" },
+        "lastPublishedVersionId": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studioName", "visualIdentity", "contact", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "PortfolioPage": {
+      "title": "PortfolioPage",
+      "description": "An individual 16:9 panoramic portfolio page containing editable canvas elements.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "order": { "type": "integer" },
+        "slug": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "subtitle": { "type": "string", "maxLength": 240 },
+        "templateType": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "visible": { "type": "boolean" },
+        "backgroundColor": { "type": "string", "maxLength": 40 },
+        "backgroundGradient": { "type": "string", "maxLength": 300 },
+        "backgroundImage": { "type": "string", "maxLength": 1000 },
+        "accentColorOverride": { "type": "string", "maxLength": 40 },
+        "elements": { "type": "array" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "order", "slug", "title", "templateType", "visible", "elements", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "ServiceItem": {
+      "title": "ServiceItem",
+      "description": "A studio service offering displayed in the portfolio.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "number": { "type": "string", "maxLength": 16 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 600 },
+        "category": { "type": "string", "maxLength": 80 },
+        "deliverables": { "type": "array" },
+        "visible": { "type": "boolean" },
+        "order": { "type": "integer" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "description", "visible", "order", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "PackageItem": {
+      "title": "PackageItem",
+      "description": "A commercial service package with pricing, currency, features, and visibility.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "category": { "type": "string", "enum": ["branding", "social", "video", "custom"] },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 500 },
+        "price": { "type": "string", "maxLength": 60 },
+        "currency": { "type": "string", "maxLength": 12 },
+        "billingPeriod": { "type": "string", "maxLength": 60 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "features": { "type": "array" },
+        "promoLabel": { "type": "string", "maxLength": 60 },
+        "isPopular": { "type": "boolean" },
+        "visible": { "type": "boolean" },
+        "order": { "type": "integer" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "category", "name", "currency", "features", "isPopular", "visible", "order", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "TestimonialItem": {
+      "title": "TestimonialItem",
+      "description": "A verified client testimonial and project outcome.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clientName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "clientRole": { "type": "string", "maxLength": 120 },
+        "company": { "type": "string", "maxLength": 120 },
+        "quote": { "type": "string", "minLength": 1, "maxLength": 800 },
+        "resultMetric": { "type": "string", "maxLength": 120 },
+        "avatarUrl": { "type": "string", "maxLength": 1000 },
+        "visible": { "type": "boolean" },
+        "order": { "type": "integer" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clientName", "quote", "visible", "order", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "MediaFolder": {
+      "title": "MediaFolder",
+      "description": "Folder for organizing uploaded media library assets.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "MediaItem": {
+      "title": "MediaItem",
+      "description": "Uploaded image, logo, or video asset stored in Firebase Storage.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "url": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "storagePath": { "type": "string", "maxLength": 500 },
+        "mediaType": { "type": "string", "enum": ["image", "logo", "video"] },
+        "mimeType": { "type": "string", "maxLength": 100 },
+        "sizeBytes": { "type": "integer" },
+        "folderId": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 80 },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "url", "mediaType", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "MediaAsset": {
+      "title": "MediaAsset",
+      "description": "Optimized uploaded image or logo data persisted directly in Firestore.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "dataUrl": { "type": "string", "minLength": 1, "maxLength": 900000 },
+        "mimeType": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "sizeBytes": { "type": "integer" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "dataUrl", "mimeType", "sizeBytes", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "PortfolioVersion": {
+      "title": "PortfolioVersion",
+      "description": "Saved snapshot of the portfolio for version history and rollback.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "notes": { "type": "string", "maxLength": 400 },
+        "snapshot": { "type": "object" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "label", "snapshot", "ownerUid", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Authorized admin records for role-based access control."
+    },
+    "/published_portfolio/{docId}": {
+      "schema": { "$ref": "#/entities/PortfolioConfig" },
+      "description": "Publicly readable published portfolio global configuration."
+    },
+    "/published_pages/{pageId}": {
+      "schema": { "$ref": "#/entities/PortfolioPage" },
+      "description": "Publicly readable published 16:9 portfolio pages."
+    },
+    "/published_services/{serviceId}": {
+      "schema": { "$ref": "#/entities/ServiceItem" },
+      "description": "Publicly readable published studio services."
+    },
+    "/published_packages/{packageId}": {
+      "schema": { "$ref": "#/entities/PackageItem" },
+      "description": "Publicly readable published commercial packages."
+    },
+    "/published_testimonials/{testimonialId}": {
+      "schema": { "$ref": "#/entities/TestimonialItem" },
+      "description": "Publicly readable published client testimonials."
+    },
+    "/draft_portfolio/{docId}": {
+      "schema": { "$ref": "#/entities/PortfolioConfig" },
+      "description": "Admin-only working draft of global portfolio configuration."
+    },
+    "/draft_pages/{pageId}": {
+      "schema": { "$ref": "#/entities/PortfolioPage" },
+      "description": "Admin-only working draft of 16:9 portfolio pages."
+    },
+    "/draft_services/{serviceId}": {
+      "schema": { "$ref": "#/entities/ServiceItem" },
+      "description": "Admin-only working draft of studio services."
+    },
+    "/draft_packages/{packageId}": {
+      "schema": { "$ref": "#/entities/PackageItem" },
+      "description": "Admin-only working draft of commercial packages."
+    },
+    "/draft_testimonials/{testimonialId}": {
+      "schema": { "$ref": "#/entities/TestimonialItem" },
+      "description": "Admin-only working draft of client testimonials."
+    },
+    "/media_folders/{folderId}": {
+      "schema": { "$ref": "#/entities/MediaFolder" },
+      "description": "Admin-only folders for media asset organization."
+    },
+    "/media_items/{itemId}": {
+      "schema": { "$ref": "#/entities/MediaItem" },
+      "description": "Admin-only catalog of uploaded images, logos, and videos."
+    },
+    "/media_assets/{assetId}": {
+      "schema": { "$ref": "#/entities/MediaAsset" },
+      "description": "Publicly readable (by asset ID) compressed image/logo payloads uploaded via Admin."
+    },
+    "/portfolio_versions/{versionId}": {
+      "schema": { "$ref": "#/entities/PortfolioVersion" },
+      "description": "Admin-only publication snapshots for restoring prior versions."
+    }
+  }
+}
